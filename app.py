@@ -19,17 +19,17 @@ process_url_clicked = st.sidebar.button("Process URLs")
 file_path = "faiss_store_index"
 main_placeholder = st.empty()
 
-# 1. Initialize Gemini LLM using Streamlit Secrets
+# 1. Setup Gemini LLM securely using Streamlit Secrets
 llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash",
+    model="gemini-2.5-flash",
     google_api_key=st.secrets["GOOGLE_API_KEY"],
     temperature=0.2
 )
 
-# 2. Initialize Embeddings
+# 2. Setup Embeddings (MUST BE DEFINED HERE)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# 3. Process URLs & Build Vector Index
+# 3. Process URLs & Store in FAISS
 if process_url_clicked:
     valid_urls = [u.strip() for u in urls if u.strip()]
     if valid_urls:
@@ -44,7 +44,7 @@ if process_url_clicked:
         vectorstore.save_local(file_path)
         main_placeholder.text("Processing Complete! ✅")
 
-# 4. User Question & RAG Chain
+# 4. Query RAG Chain
 query = st.text_input("Question:")
 
 if query:
@@ -52,11 +52,7 @@ if query:
         vectorstore = FAISS.load_local(file_path, embeddings, allow_dangerous_deserialization=True)
         retriever = vectorstore.as_retriever()
         
-        system_prompt = (
-            "You are a helpful news research assistant. "
-            "Use the provided context to answer the question accurately.\n\n"
-            "Context:\n{context}"
-        )
+        system_prompt = "You are a news research assistant. Use the context to answer accurately.\n\nContext: {context}"
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
             ("human", "{input}")
@@ -70,15 +66,3 @@ if query:
         
         st.header("Answer:")
         st.write(response["answer"])
-        
-        st.subheader("Sources:")
-        for doc in response.get("context", []):
-            if "source" in doc.metadata:
-                st.write(doc.metadata["source"])
-    else:
-        st.warning("Please process the URLs first to build the index before asking questions.")
-        
-        st.subheader("Sources:")
-        for doc in response.get("context", []):
-            if "source" in doc.metadata:
-                st.write(doc.metadata["source"])
