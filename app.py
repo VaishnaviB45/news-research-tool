@@ -19,9 +19,11 @@ process_url_clicked = st.sidebar.button("Process URLs")
 file_path = "faiss_store_index"
 main_placeholder = st.empty()
 
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
+llm = ChatGoogleGenerativeAI(
+    model="models/gemini-1.5-flash",
+    google_api_key=st.secrets["GOOGLE_API_KEY"],
+    temperature=0.2
+)
 if process_url_clicked:
     valid_urls = [u.strip() for u in urls if u.strip()]
     if valid_urls:
