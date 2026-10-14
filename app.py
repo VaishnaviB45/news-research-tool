@@ -39,6 +39,11 @@ if process_url_clicked:
 
 query = st.text_input("Question:")
 
+import time
+from google.genai.errors import ServerError
+
+query = st.text_input("Question:")
+
 if query:
     if os.path.exists(file_path):
         vectorstore = FAISS.load_local(file_path, embeddings, allow_dangerous_deserialization=True)
@@ -47,27 +52,57 @@ if query:
         
         context_text = "\n\n".join([doc.page_content for doc in retrieved_docs])
         
-        main_placeholder.text("Calling LLM... ✅")
+        main_placeholder.text("Calling LLM... ⏳")
         
         prompt = (
-            f"You are a helpful news research assistant. Use the following context to answer the question:\n\n"
+            f"You are a helpful news assistant. Use the following context to answer the question:\n\n"
             f"Context:\n{context_text}\n\n"
             f"Question: {query}\n\n"
             f"Answer:"
         )
-        
-       # Calls the official endpoint with gemini-3.8-flash
-        response = client.models.generate_content(
-            model="gemini-flash-latest",
-            contents=prompt
-        )
-        
-        st.header("Answer:")
-        st.write(response.text)
-        
-        st.subheader("Sources:")
-        for doc in retrieved_docs:
-            if "source" in doc.metadata:
-                st.write(doc.metadata["source"])
+
+        # Candidate models ordered by preference
+        candidate_models = [
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ]
+
+        response_text = None
+        used_model = None
+
+        for model_name in candidate_models:
+            for attempt in range(3):
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    if response and response.text:
+                        response_text = response.text
+                        used_model = model_name
+                        break
+                except ServerError as e:
+                    # 503 Overloaded: wait briefly before retrying
+                    time.sleep(2 * (attempt + 1))
+                except Exception:
+                    break
+            if response_text:
+                break
+
+        main_placeholder.empty()
+
+        if response_text:
+            st.header("Answer:")
+            st.write(response_text)
+            
+            st.caption(f"Generated using `{used_model}`")
+            
+            st.subheader("Sources:")
+            for doc in retrieved_docs:
+                if "source" in doc.metadata:
+                    st.write(doc.metadata["source"])
+        else:
+            st.error("Google's servers are currently experiencing high traffic across endpoints. Please wait 10–20 seconds and click outside the box to retry.")
     else:
         st.warning("Please process the URLs first to build the index before asking questions.")
