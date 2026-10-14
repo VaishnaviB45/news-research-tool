@@ -1,11 +1,7 @@
 streamlit
+google-genai
 langchain
 langchain-community
-langchain-core
-langchain-classic
-langchain-google-genai==2.0.8
-google-generativeai
 sentence-transformers
 faiss-cpu
 beautifulsoup4
-pydantic
