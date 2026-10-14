@@ -58,7 +58,7 @@ if query:
         
        # Calls the official endpoint with gemini-3.8-flash
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="gemini-flash-latest",
             contents=prompt
         )
         
