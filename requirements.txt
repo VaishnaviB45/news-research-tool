@@ -4,7 +4,8 @@ langchain
 langchain-community
 langchain-core
 langchain-text-splitters
-langchain-google-genai
+torch
+torchvision
 sentence-transformers
 faiss-cpu
 beautifulsoup4
