@@ -1,6 +1,8 @@
 import os
+import time
 import streamlit as st
 from google import genai
+from google.genai.errors import ServerError
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -10,19 +12,23 @@ st.set_page_config(page_title="News Research Tool", layout="wide")
 st.title("News Research Tool 📈")
 
 st.sidebar.title("News Article URLs")
-urls = [st.sidebar.text_input(f"URL {i+1}") for i in range(3)]
-process_url_clicked = st.sidebar.button("Process URLs")
+urls = [
+    st.sidebar.text_input(f"URL {i+1}", key=f"sidebar_url_{i+1}") 
+    for i in range(3)
+]
+process_url_clicked = st.sidebar.button("Process URLs", key="btn_process_urls")
 
 file_path = "faiss_store_index"
 main_placeholder = st.empty()
 
-# Initialize Google GenAI client directly with the secret key
+# 1. Initialize Google GenAI client directly with the secret key
 api_key = st.secrets["GOOGLE_API_KEY"].strip()
 client = genai.Client(api_key=api_key)
 
-# Initialize embeddings
+# 2. Initialize HuggingFace embeddings
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
+# 3. Process URLs & Build FAISS Index
 if process_url_clicked:
     valid_urls = [u.strip() for u in urls if u.strip()]
     if valid_urls:
@@ -36,13 +42,11 @@ if process_url_clicked:
         vectorstore = FAISS.from_documents(docs, embeddings)
         vectorstore.save_local(file_path)
         main_placeholder.text("Processing Complete! ✅")
+    else:
+        st.sidebar.warning("Please provide at least one valid URL.")
 
-query = st.text_input("Question:")
-
-import time
-from google.genai.errors import ServerError
-
-query = st.text_input("Question:")
+# 4. Question Input & RAG Pipeline
+query = st.text_input("Question:", key="main_user_query_input")
 
 if query:
     if os.path.exists(file_path):
@@ -61,7 +65,7 @@ if query:
             f"Answer:"
         )
 
-        # Candidate models ordered by preference
+        # Candidate models ordered by priority
         candidate_models = [
             "gemini-2.5-flash",
             "gemini-2.0-flash",
@@ -82,8 +86,8 @@ if query:
                         response_text = response.text
                         used_model = model_name
                         break
-                except ServerError as e:
-                    # 503 Overloaded: wait briefly before retrying
+                except ServerError:
+                    # Exponential backoff for temporary 503 spikes
                     time.sleep(2 * (attempt + 1))
                 except Exception:
                     break
@@ -103,6 +107,6 @@ if query:
                 if "source" in doc.metadata:
                     st.write(doc.metadata["source"])
         else:
-            st.error("Google's servers are currently experiencing high traffic across endpoints. Please wait 10–20 seconds and click outside the box to retry.")
+            st.error("Google's servers are currently experiencing high traffic. Please wait 10–20 seconds and retry.")
     else:
         st.warning("Please process the URLs first to build the index before asking questions.")
