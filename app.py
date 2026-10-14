@@ -25,8 +25,8 @@ if "GOOGLE_API_KEY" in st.secrets:
 
 # Initialize LLM with standard model name
 llm = ChatGoogleGenerativeAI(
-    model="models/gemini-3.8-flash",
-    google_api_key=os.environ.get("GOOGLE_API_KEY"),
+    model="gemini-2.5-flash",
+    google_api_key=st.secrets["GOOGLE_API_KEY"].strip(),
     temperature=0.2
 )
 
