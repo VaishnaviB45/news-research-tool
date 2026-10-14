@@ -19,7 +19,7 @@ process_url_clicked = st.sidebar.button("Process URLs")
 file_path = "faiss_store_index"
 main_placeholder = st.empty()
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 if process_url_clicked:
